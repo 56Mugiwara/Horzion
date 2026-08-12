@@ -1,0 +1,482 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Chat & Community Dashboard</title>
+    <script src="https://accounts.google.com/gsi/client" async defer></script>
+    
+    <style>
+        :root {
+            --bg-main: #131722;
+            --sidebar-bg: #1e222d;
+            --panel-bg: #181c27;
+            --border-color: #2a2e39;
+            --accent: #5865F2;
+            --accent-hover: #4752C4;
+            --text-main: #dbdee1;
+            --text-muted: #949ba4;
+            --danger: #ed4245;
+            --success: #57f287;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: var(--bg-main);
+            color: var(--text-main);
+            margin: 0;
+            padding: 0;
+            height: 100vh;
+            display: flex;
+            overflow: hidden;
+        }
+
+        .hidden { display: none !important; }
+
+        /* AUTHENTICATION STYLES */
+        #auth-container {
+            width: 100vw;
+            height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            background: linear-gradient(135deg, #1e222d 0%, #131722 100%);
+        }
+
+        .auth-card {
+            background: var(--sidebar-bg);
+            border: 1px solid var(--border-color);
+            padding: 40px;
+            border-radius: 12px;
+            width: 100%;
+            max-width: 420px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+            text-align: center;
+            box-sizing: border-box;
+        }
+
+        .auth-card h2 { margin-top: 0; margin-bottom: 24px; color: #fff; font-size: 24px; }
+
+        .divider {
+            display: flex;
+            align-items: center;
+            text-align: center;
+            color: var(--text-muted);
+            font-size: 13px;
+            margin: 20px 0;
+        }
+        .divider::before, .divider::after { content: ''; flex: 1; border-bottom: 1px solid var(--border-color); }
+        .divider::before { margin-right: 15px; }
+        .divider::after { margin-left: 15px; }
+
+        .auth-card label { display: block; text-align: left; font-size: 13px; font-weight: 600; color: var(--text-main); margin-bottom: 6px; }
+        .auth-card input {
+            width: 100%; padding: 12px; margin-bottom: 16px; background: var(--bg-main);
+            border: 1px solid var(--border-color); border-radius: 6px; color: var(--text-main); box-sizing: border-box;
+        }
+        .auth-card button.action-btn {
+            background: #1d70f5; color: white; border: none; width: 100%; padding: 12px;
+            border-radius: 6px; font-weight: 600; cursor: pointer; font-size: 15px;
+        }
+        .auth-card button.action-btn:hover { background: #155bc2; }
+
+        /* GOOGLE BUTTON CONTAINER */
+        #google-btn-container {
+            display: flex;
+            justify-content: center;
+            margin-bottom: 15px;
+        }
+
+        /* MAIN APP STYLES (Same as before) */
+        #app-container { width: 100vw; height: 100vh; display: flex; }
+        .sidebar { width: 280px; background: var(--sidebar-bg); border-right: 1px solid var(--border-color); display: flex; flex-direction: column; }
+        .sidebar-header { padding: 20px; font-size: 16px; font-weight: bold; border-bottom: 1px solid var(--border-color); }
+        .sidebar-content { flex: 1; overflow-y: auto; padding: 15px; }
+        .section-title { font-size: 12px; text-transform: uppercase; color: var(--text-muted); margin-bottom: 8px; font-weight: bold; display: flex; justify-content: space-between; align-items: center; }
+        .list-item { padding: 10px; border-radius: 6px; cursor: pointer; margin-bottom: 4px; display: flex; align-items: center; gap: 10px; }
+        .list-item:hover, .list-item.active { background: rgba(255,255,255,0.07); color: #fff; }
+        .main-chat-area { flex: 1; display: flex; flex-direction: column; background: var(--bg-main); }
+        .chat-header { height: 60px; border-bottom: 1px solid var(--border-color); display: flex; align-items: center; justify-content: space-between; padding: 0 20px; background: var(--panel-bg); }
+        .chat-messages { flex: 1; padding: 20px; overflow-y: auto; display: flex; flex-direction: column; gap: 15px; }
+        .message { display: flex; flex-direction: column; }
+        .message .meta { font-size: 12px; color: var(--text-muted); margin-bottom: 3px; }
+        .message .bubble { background: var(--sidebar-bg); padding: 10px 14px; border-radius: 8px; max-width: 60%; word-break: break-word; border: 1px solid var(--border-color); }
+        .chat-input-area { padding: 20px; background: var(--panel-bg); border-top: 1px solid var(--border-color); display: flex; gap: 10px; }
+        .chat-input-area input { flex: 1; background: var(--bg-main); border: 1px solid var(--border-color); padding: 12px; border-radius: 6px; color: var(--text-main); }
+        .chat-input-area button { background: var(--accent); border: none; color: white; padding: 0 20px; border-radius: 6px; font-weight: bold; cursor: pointer; }
+        .top-bar-profile { display: flex; align-items: center; gap: 12px; }
+        .avatar-container { width: 36px; height: 36px; border-radius: 50%; overflow: hidden; background: #4f545c; cursor: pointer; border: 2px solid var(--accent); }
+        .avatar-container img { width: 100%; height: 100%; object-fit: cover; }
+        
+        /* MODALS */
+        .modal-overlay { position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: rgba(0,0,0,0.7); display: flex; justify-content: center; align-items: center; z-index: 1000; }
+        .modal-card { background: var(--sidebar-bg); border: 1px solid var(--border-color); width: 450px; border-radius: 8px; padding: 24px; box-shadow: 0 10px 25px rgba(0,0,0,0.5); }
+        .modal-card h3 { margin-top: 0; display: flex; justify-content: space-between; align-items: center; }
+        .close-btn { background: none; border: none; color: var(--text-muted); font-size: 18px; cursor: pointer; }
+        .friend-code-badge { background: var(--bg-main); padding: 10px; border-radius: 6px; font-family: monospace; letter-spacing: 1.5px; color: var(--success); border: 1px dashed var(--border-color); text-align: center; margin: 10px 0; }
+        .control-input { width: 100%; padding: 10px; background: var(--bg-main); border: 1px solid var(--border-color); border-radius: 6px; color: var(--text-main); margin: 8px 0 15px 0; box-sizing: border-box; }
+        button.sub-action { background: var(--border-color); color: white; border: none; padding: 8px 12px; border-radius: 4px; cursor: pointer; font-weight: 600; }
+        button.sub-action:hover { background: #3a3f4b; }
+    </style>
+</head>
+<body>
+
+    <div id="auth-container">
+        
+        <div id="login-form-view" class="auth-card">
+            <h2>Log in to your account</h2>
+
+            <div id="google-btn-container"></div>
+
+            <div class="divider">OR USE USERNAME</div>
+
+            <label>Username</label>
+            <input type="text" id="manual-user" placeholder="Enter username">
+
+            <label>Password</label>
+            <input type="password" id="manual-pass" placeholder="Enter password">
+
+            <button class="action-btn" onclick="handleManualLogin()">Log in</button>
+        </div>
+
+        <div id="signup-view" class="auth-card hidden">
+            <h2>Create Your Account</h2>
+            <p style="color: var(--text-muted); font-size: 13px; margin-bottom: 20px;">First time signing in with <span id="display-google-email" style="color:white;"></span>? Set up your username and password below.</p>
+            
+            <label>Choose Username</label>
+            <input type="text" id="new-username" placeholder="Display name">
+
+            <label>Choose Password</label>
+            <input type="password" id="new-password" placeholder="Secure password">
+
+            <button class="action-btn" onclick="completeNewAccountCreation()">Complete Registration</button>
+        </div>
+
+    </div>
+
+    <div id="app-container" class="hidden">
+        <div class="sidebar">
+            <div class="sidebar-header"><span>Chats & Groups</span></div>
+            <div class="sidebar-content">
+                <div class="section-title"><span>Direct Messages</span></div>
+                <div id="friends-sidebar-list"></div>
+
+                <div class="section-title" style="margin-top: 20px;">
+                    <span>Groups</span>
+                    <span style="cursor:pointer; font-size: 16px;" onclick="openGroupModal()">+</span>
+                </div>
+                <div id="groups-sidebar-list"></div>
+            </div>
+        </div>
+
+        <div class="main-chat-area">
+            <div class="chat-header">
+                <div id="current-chat-title" style="font-weight: bold; font-size: 16px;">Select a chat or group</div>
+                <div class="top-bar-profile">
+                    <span id="header-username" style="font-size: 14px; font-weight: 500;"></span>
+                    <div class="avatar-container" onclick="openSettingsModal()">
+                        <img id="header-avatar-img" src="" alt="Profile">
+                    </div>
+                </div>
+            </div>
+
+            <div class="chat-messages" id="chat-messages-box">
+                <div style="margin: auto; color: var(--text-muted); text-align: center;"><p>Select a friend or group from the sidebar to start messaging.</p></div>
+            </div>
+
+            <div class="chat-input-area" id="chat-input-wrapper" style="display: none;">
+                <input type="text" id="message-input" placeholder="Type a message..." onkeydown="if(event.key==='Enter') sendMessage()">
+                <button onclick="sendMessage()">Send</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="settings-modal" class="modal-overlay hidden">
+        <div class="modal-card">
+            <h3>Profile & Settings <button class="close-btn" onclick="closeSettingsModal()">&times;</button></h3>
+            <label style="font-size: 12px; color: var(--text-muted);">YOUR 16-LETTER FRIEND CODE</label>
+            <div class="friend-code-badge" id="modal-friend-code">----------------</div>
+            
+            <label style="font-size: 12px; color: var(--text-muted);">CHANGE PROFILE PICTURE (Avatar Seed)</label>
+            <input type="text" id="avatar-seed-input" class="control-input" placeholder="Type a word to change avatar">
+            <button class="sub-action" onclick="updateAvatar()">Update PFP</button>
+
+            <hr style="border: 0; border-top: 1px solid var(--border-color); margin: 20px 0;">
+            <label style="font-size: 12px; color: var(--text-muted);">ADD FRIEND VIA CODE</label>
+            <input type="text" id="add-friend-input" class="control-input" placeholder="Enter 16-letter friend code">
+            <button class="sub-action" style="background: var(--accent);" onclick="addFriendCode()">Add Friend</button>
+            
+            <hr style="border: 0; border-top: 1px solid var(--border-color); margin: 20px 0;">
+            <button class="sub-action" style="background: var(--danger); width: 100%;" onclick="logout()">Log Out</button>
+        </div>
+    </div>
+
+    <div id="group-modal" class="modal-overlay hidden">
+        <div class="modal-card">
+            <h3>Create a Group <button class="close-btn" onclick="closeGroupModal()">&times;</button></h3>
+            <label style="font-size: 12px; color: var(--text-muted);">GROUP NAME</label>
+            <input type="text" id="new-group-name" class="control-input" placeholder="e.g. Study Group">
+            <button class="sub-action" style="background: var(--accent); width: 100%;" onclick="createGroupAction()">Create Group</button>
+        </div>
+    </div>
+
+<script>
+    const USERS_DB_KEY = 'chat_app_db_v3';
+    const SESSION_KEY = 'chat_app_session_v3';
+    const MESSAGES_KEY = 'chat_app_msgs_v3';
+
+    let activeUser = null;
+    let activeChatTarget = null;
+    let pendingGoogleEmail = null;
+
+    // --- REAL GOOGLE SIGN-IN INITIALIZATION ---
+    window.onload = function () {
+        // Initialize Google Identity Services
+        google.accounts.id.initialize({
+            // REPLACE THIS WITH YOUR ACTUAL GOOGLE CLIENT ID FROM CLOUD CONSOLE
+            client_id: "YOUR_GOOGLE_CLIENT_ID_HERE.apps.googleusercontent.com",
+            callback: handleRealGoogleResponse
+        });
+
+        // Render the official button
+        google.accounts.id.renderButton(
+            document.getElementById("google-btn-container"),
+            { theme: "outline", size: "large", type: "standard", shape: "rectangular" }
+        );
+
+        // Check if already logged in via LocalStorage
+        const loggedInUser = localStorage.getItem(SESSION_KEY);
+        if (loggedInUser && fetchUsers()[loggedInUser]) {
+            activeUser = loggedInUser;
+            launchAppDashboard();
+        }
+    };
+
+    // Helper to decode the JWT token Google sends back
+    function parseJwt(token) {
+        var base64Url = token.split('.')[1];
+        var base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/');
+        var jsonPayload = decodeURIComponent(window.atob(base64).split('').map(function(c) {
+            return '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2);
+        }).join(''));
+        return JSON.parse(jsonPayload);
+    }
+
+    // Callback when Google successfully authenticates the user
+    function handleRealGoogleResponse(response) {
+        const responsePayload = parseJwt(response.credential);
+        const userEmail = responsePayload.email;
+        const userName = responsePayload.name; // Can use this as a default avatar seed
+
+        let db = fetchUsers();
+        let existingUsername = null;
+
+        // Check if this Google email is already linked to an account
+        for (let uname in db) {
+            if (db[uname].googleEmail === userEmail) {
+                existingUsername = uname;
+                break;
+            }
+        }
+
+        if (existingUsername) {
+            // Already registered, log in immediately
+            localStorage.setItem(SESSION_KEY, existingUsername);
+            activeUser = existingUsername;
+            launchAppDashboard();
+        } else {
+            // New user, direct to account creation
+            pendingGoogleEmail = userEmail;
+            document.getElementById('display-google-email').innerText = userEmail;
+            
+            // Auto-fill username with their Google Name to save time
+            document.getElementById('new-username').value = userName.replace(/\s+/g, '');
+
+            document.getElementById('login-form-view').classList.add('hidden');
+            document.getElementById('signup-view').classList.remove('hidden');
+        }
+    }
+    // --- END GOOGLE AUTH ---
+
+    // Local DB helpers
+    function fetchUsers() { return JSON.parse(localStorage.getItem(USERS_DB_KEY) || '{}'); }
+    function saveUsers(db) { localStorage.setItem(USERS_DB_KEY, JSON.stringify(db)); }
+    function fetchMessages() { return JSON.parse(localStorage.getItem(MESSAGES_KEY) || '{}'); }
+    function saveMessages(db) { localStorage.setItem(MESSAGES_KEY, JSON.stringify(db)); }
+    function generate16LetterCode() {
+        const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
+        return Array.from({length: 16}, () => chars[Math.floor(Math.random() * chars.length)]).join('');
+    }
+
+    // Manual Login
+    function handleManualLogin() {
+        const identifier = document.getElementById('manual-user').value.trim();
+        const pass = document.getElementById('manual-pass').value.trim();
+        if (!identifier || !pass) return alert("Enter credentials.");
+
+        let db = fetchUsers();
+        let found = null;
+        for (let uname in db) {
+            if (uname === identifier && db[uname].password === pass) {
+                found = uname; break;
+            }
+        }
+        if (found) {
+            localStorage.setItem(SESSION_KEY, found);
+            activeUser = found;
+            launchAppDashboard();
+        } else {
+            alert("Invalid username or password.");
+        }
+    }
+
+    // Complete Registration (Google or Manual)
+    function completeNewAccountCreation() {
+        const newUsername = document.getElementById('new-username').value.trim();
+        const newPass = document.getElementById('new-password').value.trim();
+        if (!newUsername || !newPass) return alert("Fill in all fields.");
+
+        let db = fetchUsers();
+        if (db[newUsername]) return alert("Username taken.");
+
+        db[newUsername] = {
+            googleEmail: pendingGoogleEmail, // Stores the real email they used
+            password: newPass,
+            friendCode: generate16LetterCode(),
+            avatarSeed: newUsername,
+            friends: [], groups: []
+        };
+        saveUsers(db);
+        localStorage.setItem(SESSION_KEY, newUsername);
+        activeUser = newUsername;
+        launchAppDashboard();
+    }
+
+    // Dashboard Logic
+    function launchAppDashboard() {
+        document.getElementById('auth-container').classList.add('hidden');
+        document.getElementById('app-container').classList.remove('hidden');
+        let userObj = fetchUsers()[activeUser];
+        document.getElementById('header-username').innerText = activeUser;
+        document.getElementById('header-avatar-img').src = `https://api.dicebear.com/7.x/bottts/svg?seed=${userObj.avatarSeed}`;
+        refreshSidebarLists();
+    }
+
+    function refreshSidebarLists() {
+        let userObj = fetchUsers()[activeUser];
+        const friendsList = document.getElementById('friends-sidebar-list');
+        const groupsList = document.getElementById('groups-sidebar-list');
+        
+        friendsList.innerHTML = userObj.friends.length ? '' : '<div style="padding:10px; color:#666;">No friends</div>';
+        userObj.friends.forEach(f => {
+            let d = document.createElement('div');
+            d.className = `list-item ${activeChatTarget === 'user:'+f ? 'active':''}`;
+            d.innerHTML = `💬 ${f}`;
+            d.onclick = () => selectChatTarget('user', f);
+            friendsList.appendChild(d);
+        });
+
+        groupsList.innerHTML = userObj.groups.length ? '' : '<div style="padding:10px; color:#666;">No groups</div>';
+        userObj.groups.forEach(g => {
+            let d = document.createElement('div');
+            d.className = `list-item ${activeChatTarget === 'group:'+g ? 'active':''}`;
+            d.innerHTML = `# ${g}`;
+            d.onclick = () => selectChatTarget('group', g);
+            groupsList.appendChild(d);
+        });
+    }
+
+    function selectChatTarget(type, name) {
+        activeChatTarget = type + ':' + name;
+        document.getElementById('current-chat-title').innerText = (type === 'user' ? '@ ' : '# ') + name;
+        document.getElementById('chat-input-wrapper').style.display = 'flex';
+        refreshSidebarLists();
+        loadMessages();
+    }
+
+    function sendMessage() {
+        const input = document.getElementById('message-input');
+        if (!input.value.trim() || !activeChatTarget) return;
+        let db = fetchMessages();
+        if (!db[activeChatTarget]) db[activeChatTarget] = [];
+        db[activeChatTarget].push({
+            sender: activeUser,
+            content: input.value.trim(),
+            timestamp: new Date().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})
+        });
+        saveMessages(db);
+        input.value = '';
+        loadMessages();
+    }
+
+    function loadMessages() {
+        const box = document.getElementById('chat-messages-box');
+        box.innerHTML = '';
+        const history = fetchMessages()[activeChatTarget] || [];
+        if (!history.length) return box.innerHTML = '<div style="text-align:center; color:#666;">Beginning of history.</div>';
+        
+        history.forEach(msg => {
+            let div = document.createElement('div'); div.className = 'message';
+            div.innerHTML = `<div class="meta">${msg.sender} <span style="font-size:10px">${msg.timestamp}</span></div>
+                             <div class="bubble">${msg.content.replace(/</g, "&lt;").replace(/>/g, "&gt;")}</div>`;
+            box.appendChild(div);
+        });
+        box.scrollTop = box.scrollHeight;
+    }
+
+    // Modal Functions
+    function openSettingsModal() {
+        let user = fetchUsers()[activeUser];
+        document.getElementById('modal-friend-code').innerText = user.friendCode;
+        document.getElementById('avatar-seed-input').value = user.avatarSeed;
+        document.getElementById('settings-modal').classList.remove('hidden');
+    }
+    function closeSettingsModal() { document.getElementById('settings-modal').classList.add('hidden'); }
+    function openGroupModal() { document.getElementById('group-modal').classList.remove('hidden'); }
+    function closeGroupModal() { document.getElementById('group-modal').classList.add('hidden'); }
+
+    function updateAvatar() {
+        const seed = document.getElementById('avatar-seed-input').value.trim();
+        if (!seed) return;
+        let db = fetchUsers();
+        db[activeUser].avatarSeed = seed;
+        saveUsers(db);
+        document.getElementById('header-avatar-img').src = `https://api.dicebear.com/7.x/bottts/svg?seed=${seed}`;
+        closeSettingsModal();
+    }
+
+    function addFriendCode() {
+        const code = document.getElementById('add-friend-input').value.trim();
+        let db = fetchUsers();
+        let target = Object.keys(db).find(uname => db[uname].friendCode === code);
+        
+        if (!target) return alert("Code not found.");
+        if (target === activeUser) return alert("Can't add yourself.");
+        if (db[activeUser].friends.includes(target)) return alert("Already friends.");
+
+        db[activeUser].friends.push(target);
+        saveUsers(db);
+        refreshSidebarLists();
+        closeSettingsModal();
+    }
+
+    function createGroupAction() {
+        const name = document.getElementById('new-group-name').value.trim();
+        if (!name) return;
+        let db = fetchUsers();
+        if (db[activeUser].groups.includes(name)) return alert("Group exists.");
+        
+        db[activeUser].groups.push(name);
+        saveUsers(db);
+        closeGroupModal();
+        refreshSidebarLists();
+        selectChatTarget('group', name);
+    }
+
+    function logout() {
+        localStorage.removeItem(SESSION_KEY);
+        location.reload();
+    }
+</script>
+</body>
+</html>
