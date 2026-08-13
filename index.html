@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Chat & Community Dashboard</title>
+    <title>Horizon - Community Dashboard</title>
     <script src="https://accounts.google.com/gsi/client" async defer></script>
     
     <style>
@@ -90,7 +90,7 @@
         /* MAIN APP STYLES */
         #app-container { width: 100vw; height: 100vh; display: flex; }
         .sidebar { width: 280px; background: var(--sidebar-bg); border-right: 1px solid var(--border-color); display: flex; flex-direction: column; }
-        .sidebar-header { padding: 20px; font-size: 16px; font-weight: bold; border-bottom: 1px solid var(--border-color); }
+        .sidebar-header { padding: 20px; font-size: 18px; font-weight: bold; border-bottom: 1px solid var(--border-color); color: #fff; display: flex; align-items: center; gap: 8px; }
         .sidebar-content { flex: 1; overflow-y: auto; padding: 15px; }
         .section-title { font-size: 12px; text-transform: uppercase; color: var(--text-muted); margin-bottom: 8px; font-weight: bold; display: flex; justify-content: space-between; align-items: center; }
         .list-item { padding: 10px; border-radius: 6px; cursor: pointer; margin-bottom: 4px; display: flex; align-items: center; gap: 10px; }
@@ -124,7 +124,7 @@
     <div id="auth-container">
         
         <div id="login-form-view" class="auth-card">
-            <h2>Log in to your account</h2>
+            <h2>Log in to Horizon</h2>
 
             <div id="google-btn-container"></div>
 
@@ -140,7 +140,7 @@
         </div>
 
         <div id="signup-view" class="auth-card hidden">
-            <h2>Create Your Account</h2>
+            <h2>Join Horizon</h2>
             <p style="color: var(--text-muted); font-size: 13px; margin-bottom: 20px;">First time signing in with <span id="display-google-email" style="color:white;"></span>? Set up your username and password below.</p>
             
             <label>Choose Username</label>
@@ -156,7 +156,7 @@
 
     <div id="app-container" class="hidden">
         <div class="sidebar">
-            <div class="sidebar-header"><span>Chats & Groups</span></div>
+            <div class="sidebar-header"><span>🌅 Horizon</span></div>
             <div class="sidebar-content">
                 <div class="section-title"><span>Direct Messages</span></div>
                 <div id="friends-sidebar-list"></div>
@@ -221,9 +221,9 @@
     </div>
 
 <script>
-    const USERS_DB_KEY = 'chat_app_db_v3';
-    const SESSION_KEY = 'chat_app_session_v3';
-    const MESSAGES_KEY = 'chat_app_msgs_v3';
+    const USERS_DB_KEY = 'horizon_app_db_v1';
+    const SESSION_KEY = 'horizon_app_session_v1';
+    const MESSAGES_KEY = 'horizon_app_msgs_v1';
 
     let activeUser = null;
     let activeChatTarget = null;
@@ -231,7 +231,7 @@
 
     // --- REAL GOOGLE SIGN-IN INITIALIZATION ---
     window.onload = function () {
-        // Initialize Google Identity Services with your custom client ID
+        // Initialize Google Identity Services with your client ID
         google.accounts.id.initialize({
             client_id: "994946297805-20li9lc9ctd40glafqtvguh8r4b0q7cl.apps.googleusercontent.com",
             callback: handleRealGoogleResponse
