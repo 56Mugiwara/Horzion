@@ -87,7 +87,7 @@
             margin-bottom: 15px;
         }
 
-        /* MAIN APP STYLES (Same as before) */
+        /* MAIN APP STYLES */
         #app-container { width: 100vw; height: 100vh; display: flex; }
         .sidebar { width: 280px; background: var(--sidebar-bg); border-right: 1px solid var(--border-color); display: flex; flex-direction: column; }
         .sidebar-header { padding: 20px; font-size: 16px; font-weight: bold; border-bottom: 1px solid var(--border-color); }
@@ -231,9 +231,8 @@
 
     // --- REAL GOOGLE SIGN-IN INITIALIZATION ---
     window.onload = function () {
-        // Initialize Google Identity Services
+        // Initialize Google Identity Services with your custom client ID
         google.accounts.id.initialize({
-            // REPLACE THIS WITH YOUR ACTUAL GOOGLE CLIENT ID FROM CLOUD CONSOLE
             client_id: "994946297805-20li9lc9ctd40glafqtvguh8r4b0q7cl.apps.googleusercontent.com",
             callback: handleRealGoogleResponse
         });
@@ -266,12 +265,11 @@
     function handleRealGoogleResponse(response) {
         const responsePayload = parseJwt(response.credential);
         const userEmail = responsePayload.email;
-        const userName = responsePayload.name; // Can use this as a default avatar seed
+        const userName = responsePayload.name;
 
         let db = fetchUsers();
         let existingUsername = null;
 
-        // Check if this Google email is already linked to an account
         for (let uname in db) {
             if (db[uname].googleEmail === userEmail) {
                 existingUsername = uname;
@@ -280,16 +278,12 @@
         }
 
         if (existingUsername) {
-            // Already registered, log in immediately
             localStorage.setItem(SESSION_KEY, existingUsername);
             activeUser = existingUsername;
             launchAppDashboard();
         } else {
-            // New user, direct to account creation
             pendingGoogleEmail = userEmail;
             document.getElementById('display-google-email').innerText = userEmail;
-            
-            // Auto-fill username with their Google Name to save time
             document.getElementById('new-username').value = userName.replace(/\s+/g, '');
 
             document.getElementById('login-form-view').classList.add('hidden');
@@ -330,7 +324,7 @@
         }
     }
 
-    // Complete Registration (Google or Manual)
+    // Complete Registration
     function completeNewAccountCreation() {
         const newUsername = document.getElementById('new-username').value.trim();
         const newPass = document.getElementById('new-password').value.trim();
@@ -340,7 +334,7 @@
         if (db[newUsername]) return alert("Username taken.");
 
         db[newUsername] = {
-            googleEmail: pendingGoogleEmail, // Stores the real email they used
+            googleEmail: pendingGoogleEmail,
             password: newPass,
             friendCode: generate16LetterCode(),
             avatarSeed: newUsername,
