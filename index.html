@@ -122,36 +122,26 @@
 <body>
 
     <div id="auth-container">
-        
         <div id="login-form-view" class="auth-card">
             <h2>Log in to Horizon</h2>
-
             <div id="google-btn-container"></div>
-
             <div class="divider">OR USE USERNAME</div>
-
             <label>Username</label>
             <input type="text" id="manual-user" placeholder="Enter username">
-
             <label>Password</label>
             <input type="password" id="manual-pass" placeholder="Enter password">
-
             <button class="action-btn" onclick="handleManualLogin()">Log in</button>
         </div>
 
         <div id="signup-view" class="auth-card hidden">
             <h2>Join Horizon</h2>
             <p style="color: var(--text-muted); font-size: 13px; margin-bottom: 20px;">First time signing in with <span id="display-google-email" style="color:white;"></span>? Set up your username and password below.</p>
-            
             <label>Choose Username</label>
             <input type="text" id="new-username" placeholder="Display name">
-
             <label>Choose Password</label>
             <input type="password" id="new-password" placeholder="Secure password">
-
             <button class="action-btn" onclick="completeNewAccountCreation()">Complete Registration</button>
         </div>
-
     </div>
 
     <div id="app-container" class="hidden">
@@ -206,6 +196,12 @@
             <input type="text" id="add-friend-input" class="control-input" placeholder="Enter 16-letter friend code">
             <button class="sub-action" style="background: var(--accent);" onclick="addFriendCode()">Add Friend</button>
             
+            <div id="active-chat-management" class="hidden">
+                <hr style="border: 0; border-top: 1px solid var(--border-color); margin: 20px 0;">
+                <label style="font-size: 12px; color: var(--text-muted);" id="manage-chat-label">MANAGE CHAT</label>
+                <button class="sub-action" style="background: var(--danger); width: 100%; margin-top: 5px;" onclick="leaveOrUnfriendCurrentChat()" id="leave-chat-btn">Remove</button>
+            </div>
+
             <hr style="border: 0; border-top: 1px solid var(--border-color); margin: 20px 0;">
             <button class="sub-action" style="background: var(--danger); width: 100%;" onclick="logout()">Log Out</button>
         </div>
@@ -229,21 +225,17 @@
     let activeChatTarget = null;
     let pendingGoogleEmail = null;
 
-    // --- REAL GOOGLE SIGN-IN INITIALIZATION ---
     window.onload = function () {
-        // Initialize Google Identity Services with your client ID
         google.accounts.id.initialize({
             client_id: "994946297805-20li9lc9ctd40glafqtvguh8r4b0q7cl.apps.googleusercontent.com",
             callback: handleRealGoogleResponse
         });
 
-        // Render the official button
         google.accounts.id.renderButton(
             document.getElementById("google-btn-container"),
             { theme: "outline", size: "large", type: "standard", shape: "rectangular" }
         );
 
-        // Check if already logged in via LocalStorage
         const loggedInUser = localStorage.getItem(SESSION_KEY);
         if (loggedInUser && fetchUsers()[loggedInUser]) {
             activeUser = loggedInUser;
@@ -251,7 +243,6 @@
         }
     };
 
-    // Helper to decode the JWT token Google sends back
     function parseJwt(token) {
         var base64Url = token.split('.')[1];
         var base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/');
@@ -261,7 +252,6 @@
         return JSON.parse(jsonPayload);
     }
 
-    // Callback when Google successfully authenticates the user
     function handleRealGoogleResponse(response) {
         const responsePayload = parseJwt(response.credential);
         const userEmail = responsePayload.email;
@@ -290,9 +280,7 @@
             document.getElementById('signup-view').classList.remove('hidden');
         }
     }
-    // --- END GOOGLE AUTH ---
 
-    // Local DB helpers
     function fetchUsers() { return JSON.parse(localStorage.getItem(USERS_DB_KEY) || '{}'); }
     function saveUsers(db) { localStorage.setItem(USERS_DB_KEY, JSON.stringify(db)); }
     function fetchMessages() { return JSON.parse(localStorage.getItem(MESSAGES_KEY) || '{}'); }
@@ -302,7 +290,6 @@
         return Array.from({length: 16}, () => chars[Math.floor(Math.random() * chars.length)]).join('');
     }
 
-    // Manual Login
     function handleManualLogin() {
         const identifier = document.getElementById('manual-user').value.trim();
         const pass = document.getElementById('manual-pass').value.trim();
@@ -324,7 +311,6 @@
         }
     }
 
-    // Complete Registration
     function completeNewAccountCreation() {
         const newUsername = document.getElementById('new-username').value.trim();
         const newPass = document.getElementById('new-password').value.trim();
@@ -346,7 +332,6 @@
         launchAppDashboard();
     }
 
-    // Dashboard Logic
     function launchAppDashboard() {
         document.getElementById('auth-container').classList.add('hidden');
         document.getElementById('app-container').classList.remove('hidden');
@@ -423,6 +408,23 @@
         let user = fetchUsers()[activeUser];
         document.getElementById('modal-friend-code').innerText = user.friendCode;
         document.getElementById('avatar-seed-input').value = user.avatarSeed;
+        
+        // Show/Hide active chat management tools inside settings
+        const managementSection = document.getElementById('active-chat-management');
+        if (activeChatTarget) {
+            managementSection.classList.remove('hidden');
+            const [type, name] = activeChatTarget.split(':');
+            if (type === 'user') {
+                document.getElementById('manage-chat-label').innerText = `UNFRIEND: ${name}`;
+                document.getElementById('leave-chat-btn').innerText = `Remove Friend`;
+            } else {
+                document.getElementById('manage-chat-label').innerText = `LEAVE GROUP: #${name}`;
+                document.getElementById('leave-chat-btn').innerText = `Leave Group`;
+            }
+        } else {
+            managementSection.classList.add('hidden');
+        }
+
         document.getElementById('settings-modal').classList.remove('hidden');
     }
     function closeSettingsModal() { document.getElementById('settings-modal').classList.add('hidden'); }
@@ -450,6 +452,31 @@
 
         db[activeUser].friends.push(target);
         saveUsers(db);
+        refreshSidebarLists();
+        closeSettingsModal();
+    }
+
+    function leaveOrUnfriendCurrentChat() {
+        if (!activeChatTarget) return;
+        let [type, name] = activeChatTarget.split(':');
+        let db = fetchUsers();
+
+        if (type === 'user') {
+            if (!confirm(`Are you sure you want to unfriend ${name}?`)) return;
+            db[activeUser].friends = db[activeUser].friends.filter(f => f !== name);
+        } else {
+            if (!confirm(`Are you sure you want to leave group #${name}?`)) return;
+            db[activeUser].groups = db[activeUser].groups.filter(g => g !== name);
+        }
+
+        saveUsers(db);
+
+        // Reset current window view
+        activeChatTarget = null;
+        document.getElementById('current-chat-title').innerText = "Select a chat or group";
+        document.getElementById('chat-input-wrapper').style.display = 'none';
+        document.getElementById('chat-messages-box').innerHTML = '<div style="margin: auto; color: var(--text-muted); text-align: center;"><p>Select a friend or group from the sidebar to start messaging.</p></div>';
+
         refreshSidebarLists();
         closeSettingsModal();
     }
